@@ -55,7 +55,13 @@ SCENARIO("Perimeter nesting", "[Perimeters]")
             static_cast<const PrintConfig&>(config),
             false); // spiral_vase
         Polygons lower_layer_polygons_cache;
-        for (const Surface &surface : slices)
+        for (const Surface &surface : slices) {
+            // we need to process each island separately because we might have different
+            // extra perimeters for each one
+            // detect how many perimeters must be generated for this island
+            int loop_number = perimeter_generator_params.config.perimeters + surface.extra_perimeters - 1; // 0-indexed loops
+            ExPolygons surface_polygons = union_ex(surface.expolygon.simplify_p(perimeter_generator_params.scaled_resolution));
+
         // FIXME Lukas H.: Disable this test for Arachne because it is failing and needs more investigation.
 //        if (config.perimeter_generator == PerimeterGeneratorType::Arachne)
 //            PerimeterGenerator::process_arachne();
@@ -63,12 +69,15 @@ SCENARIO("Perimeter nesting", "[Perimeters]")
             PerimeterGenerator::process_classic(
                 // input:
                 perimeter_generator_params,
-                surface,
+                &surface_polygons,
                 nullptr,
+                loop_number,
+                false,
                 // cache:
                 lower_layer_polygons_cache,
                 // output:
                 loops, gap_fill, fill_expolygons);
+        }
 
         THEN("expected number of collections") {
             REQUIRE(loops.entities.size() == data.expolygons.size());
