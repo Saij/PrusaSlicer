@@ -72,6 +72,7 @@ SCENARIO("Perimeter nesting", "[Perimeters]")
                 &surface_polygons,
                 nullptr,
                 loop_number,
+                false,
                 // cache:
                 lower_layer_polygons_cache,
                 // output:

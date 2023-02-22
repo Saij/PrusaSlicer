@@ -109,9 +109,10 @@ void LayerRegion::make_perimeters(
     Polygons          lower_layer_polygons_cache;
 
     for (const Surface &surface : slices) {
-        auto perimeters_begin      = uint32_t(m_perimeters.size());
-        auto gap_fills_begin       = uint32_t(m_thin_fills.size());
-        auto fill_expolygons_begin = uint32_t(fill_expolygons.size());
+        auto perimeters_begin       = uint32_t(m_perimeters.size());
+        auto gap_fills_begin        = uint32_t(m_thin_fills.size());
+        auto fill_expolygons_begin  = uint32_t(fill_expolygons.size());
+        bool no_external_perimeters = false;
 
         coord_t ext_perimeter_width = params.ext_perimeter_flow.scaled_width();
         coord_t ext_perimeter_spacing = params.ext_perimeter_flow.scaled_spacing();
@@ -204,6 +205,7 @@ void LayerRegion::make_perimeters(
                         &one_perimeter_polygons,
                         lower_slices,
                         0,
+                        false,
                         lower_layer_polygons_cache,
                         // output:
                         m_perimeters,
@@ -212,6 +214,7 @@ void LayerRegion::make_perimeters(
 
                 // // Remove two perimeters as we already created them
                 loop_number = std::max(-1, loop_number - 2);
+                no_external_perimeters = true;
             }
         }
 
@@ -235,6 +238,7 @@ void LayerRegion::make_perimeters(
                 &surface_polygons,
                 lower_slices,
                 loop_number,
+                no_external_perimeters,
                 lower_layer_polygons_cache,
                 // output:
                 m_perimeters,

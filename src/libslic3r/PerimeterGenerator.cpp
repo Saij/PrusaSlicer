@@ -1332,6 +1332,7 @@ void PerimeterGenerator::process_classic(
     const ExPolygons           *surface_polygons,
     const ExPolygons           *lower_slices,
     int                        loop_number,
+    bool                       no_external_perimeters,
     // Cache:
     Polygons                   &lower_slices_polygons_cache,
     // Output:
@@ -1450,7 +1451,7 @@ void PerimeterGenerator::process_classic(
                 break;
             }
             {
-                const bool fuzzify_contours = params.config.fuzzy_skin != FuzzySkinType::None && i == 0 && params.layer_id > 0;
+                const bool fuzzify_contours = params.config.fuzzy_skin != FuzzySkinType::None && i == 0 && params.layer_id > 0 && !no_external_perimeters;
                 const bool fuzzify_holes    = fuzzify_contours && params.config.fuzzy_skin == FuzzySkinType::All;
                 for (const ExPolygon &expolygon : offsets) {
 	                // Outer contour may overlap with an inner contour,
@@ -1458,12 +1459,12 @@ void PerimeterGenerator::process_classic(
 	                // outer contour may overlap with itself.
 	                //FIXME evaluate the overlaps, annotate each point with an overlap depth,
                     // compensate for the depth of intersection.
-                    contours[i].emplace_back(expolygon.contour, i, true, fuzzify_contours);
+                    contours[i].emplace_back(expolygon.contour, (no_external_perimeters ? i + 1 : i), true, fuzzify_contours);
 
                     if (! expolygon.holes.empty()) {
                         holes[i].reserve(holes[i].size() + expolygon.holes.size());
                         for (const Polygon &hole : expolygon.holes)
-                            holes[i].emplace_back(hole, i, false, fuzzify_holes);
+                            holes[i].emplace_back(hole, (no_external_perimeters ? i + 1 : i), false, fuzzify_holes);
                     }
                 }
             }

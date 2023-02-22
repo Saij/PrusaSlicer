@@ -71,6 +71,7 @@ void process_classic(
     const ExPolygons           *surface_polygons,
     const ExPolygons           *lower_slices,
     int                        loop_number,
+    bool                       no_external_perimeters,
     // Cache:
     Polygons                   &lower_slices_polygons_cache,
     // Output:
