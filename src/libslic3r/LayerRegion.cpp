@@ -113,6 +113,15 @@ void LayerRegion::make_perimeters(
         auto gap_fills_begin       = uint32_t(m_thin_fills.size());
         auto fill_expolygons_begin = uint32_t(fill_expolygons.size());
 
+        coord_t ext_perimeter_width = params.ext_perimeter_flow.scaled_width();
+        coord_t ext_perimeter_spacing = params.ext_perimeter_flow.scaled_spacing();
+
+        ExPolygons surface_polygons;
+        if (this->layer()->object()->config().perimeter_generator.value == PerimeterGeneratorType::Arachne && !spiral_vase)
+            surface_polygons = offset_ex(surface.expolygon.simplify_p(params.scaled_resolution), - float(ext_perimeter_width / 2. - ext_perimeter_spacing / 2.));
+        else
+            surface_polygons = union_ex(surface.expolygon.simplify_p(params.scaled_resolution));
+
         // we need to process each island separately because we might have different
         // extra perimeters for each one
         // detect how many perimeters must be generated for this island
@@ -128,7 +137,6 @@ void LayerRegion::make_perimeters(
         // and the parameter only_one_perimeter_top active for all surfaces
         // and are not on the topmost layer
         if (loop_number > 0 && params.config.only_one_perimeter_top == OnePerimeterTopType::TopSurfaces && upper_slices != nullptr) {
-            ExPolygons current_polygons = union_ex(surface.expolygon.simplify_p(params.scaled_resolution));
             coord_t ext_perimeter_spacing = params.ext_perimeter_flow.scaled_spacing();
             coord_t perimeter_width = params.perimeter_flow.scaled_width();
 
@@ -139,19 +147,80 @@ void LayerRegion::make_perimeters(
             ExPolygons grown_upper_slices = expand_ex(*upper_slices, min_width_top_surface);
 
             // Get the part of the current layer that is pure top surface
-            ExPolygons top_surface_polygons = diff_ex(current_polygons, grown_upper_slices, ApplySafetyOffset::Yes);
+            ExPolygons top_surface_polygons = diff_ex(surface_polygons, grown_upper_slices, ApplySafetyOffset::Yes);
             
             // If we have a top-surface we switch to only one perimeter
             if (!top_surface_polygons.empty()) {
-                loop_number = 0;
+                // Get the offset from solid surface anchor
+                coord_t offset_top_surface = scale_(EXTERNAL_INFILL_MARGIN);
+                coord_t perimeter_spacing  = params.perimeter_flow.scaled_spacing();
+
+                // If possible, try to not push the extra perimeters inside the sparse infill
+                if (offset_top_surface > 0.9 * (params.config.perimeters.value <= 1 ? 0. : (perimeter_spacing * (params.config.perimeters.value - 1))))
+                    offset_top_surface -= coord_t(0.9 * (params.config.perimeters.value <= 1 ? 0. : (perimeter_spacing * (params.config.perimeters.value - 1))));
+                else
+                    offset_top_surface = 0;
+
+                // Get the not-top surface, from the "real top" but enlarged by EXTERNAL_INFILL_MARGIN (and the min_width_top_surface we removed a bit before)
+                ExPolygons inner_polygons = diff_ex(surface_polygons, offset_ex(top_surface_polygons, offset_top_surface + min_width_top_surface), ApplySafetyOffset::Yes);
+
+                // Shrink inner polygons to make space for 2 external perimeter
+                inner_polygons = offset_ex(inner_polygons, ext_perimeter_spacing * -2);
+
+                ExPolygons one_perimeter_polygons = diff_ex(surface_polygons, inner_polygons, ApplySafetyOffset::Yes);
+                ExPolygons oldSurfacePolygons = surface_polygons;
+                surface_polygons = diff_ex(surface_polygons, one_perimeter_polygons);
+
+                if (this->layer()->id() == 117) {
+                    {
+                        static int testnum = 0;
+                        std::stringstream stri;
+                        stri << this->layer()->id() << "_one_peri_test_" << testnum++ << ".svg";
+                        SVG svg(stri.str());
+                        svg.draw(oldSurfacePolygons, "black");
+                        svg.draw(surface_polygons, "red");
+                        svg.draw(one_perimeter_polygons, "blue");
+                        svg.Close();
+                    }
+                }
+
+                // Generate perimeter for top surface
+                if (this->layer()->object()->config().perimeter_generator.value == PerimeterGeneratorType::Arachne && !spiral_vase)
+                    PerimeterGenerator::process_arachne(
+                        // input:
+                        params,
+                        &one_perimeter_polygons,
+                        lower_slices,
+                        0,
+                        lower_layer_polygons_cache,
+                        // output:
+                        m_perimeters,
+                        m_thin_fills,
+                        fill_expolygons);
+                else
+                    PerimeterGenerator::process_classic(
+                        // input:
+                        params,
+                        &one_perimeter_polygons,
+                        lower_slices,
+                        0,
+                        lower_layer_polygons_cache,
+                        // output:
+                        m_perimeters,
+                        m_thin_fills,
+                        fill_expolygons);
+
+                // // Remove two perimeters as we already created them
+                loop_number = std::max(-1, loop_number - 2);
             }
         }
 
+        // Generate other perimeter
         if (this->layer()->object()->config().perimeter_generator.value == PerimeterGeneratorType::Arachne && !spiral_vase)
             PerimeterGenerator::process_arachne(
                 // input:
                 params,
-                surface,
+                &surface_polygons,
                 lower_slices,
                 loop_number,
                 lower_layer_polygons_cache,
@@ -163,7 +232,7 @@ void LayerRegion::make_perimeters(
             PerimeterGenerator::process_classic(
                 // input:
                 params,
-                surface,
+                &surface_polygons,
                 lower_slices,
                 loop_number,
                 lower_layer_polygons_cache,

@@ -1087,7 +1087,7 @@ std::tuple<std::vector<ExtrusionPaths>, Polygons> generate_extra_perimeters_over
 void PerimeterGenerator::process_arachne(
     // Inputs:
     const Parameters           &params,
-    const Surface              &surface,
+    const ExPolygons           *surface_polygons,
     const ExPolygons           *lower_slices,
     int                        loop_number,
     // Cache:
@@ -1118,7 +1118,7 @@ void PerimeterGenerator::process_arachne(
         lower_slices_polygons_cache = offset(*lower_slices, float(scale_(+nozzle_diameter/2)));
     }
 
-    ExPolygons last        = offset_ex(surface.expolygon.simplify_p(params.scaled_resolution), - float(ext_perimeter_width / 2. - ext_perimeter_spacing / 2.));
+    ExPolygons last        = *surface_polygons;
     Polygons   last_p      = to_polygons(last);
 
     Arachne::WallToolPaths wallToolPaths(last_p, ext_perimeter_spacing, perimeter_spacing, coord_t(loop_number + 1), 0, params.layer_height, params.object_config, params.print_config);
@@ -1329,7 +1329,7 @@ void PerimeterGenerator::process_arachne(
 void PerimeterGenerator::process_classic(
     // Inputs:
     const Parameters           &params,
-    const Surface              &surface,
+    const ExPolygons           *surface_polygons,
     const ExPolygons           *lower_slices,
     int                        loop_number,
     // Cache:
@@ -1375,8 +1375,9 @@ void PerimeterGenerator::process_classic(
         lower_slices_polygons_cache = offset(*lower_slices, float(scale_(+nozzle_diameter/2)));
     }
 
-    ExPolygons last        = union_ex(surface.expolygon.simplify_p(params.scaled_resolution));
+    ExPolygons last        = *surface_polygons;
     ExPolygons gaps;
+
     if (loop_number >= 0) {
         // In case no perimeters are to be generated, loop_number will equal to -1.
         std::vector<PerimeterGeneratorLoops> contours(loop_number+1);    // depth => loops
