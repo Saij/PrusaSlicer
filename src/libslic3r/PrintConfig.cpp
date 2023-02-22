@@ -123,6 +123,13 @@ static const t_config_enum_values s_keys_map_IroningType {
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(IroningType)
 
+static const t_config_enum_values s_keys_map_OnePerimeterTopType {
+    { "none",           int(OnePerimeterTopType::None) },
+    { "top",            int(OnePerimeterTopType::TopSurfaces) },
+    { "topmost",        int(OnePerimeterTopType::TopmostOnly) }
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(OnePerimeterTopType)
+
 static const t_config_enum_values s_keys_map_SlicingMode {
     { "regular",        int(SlicingMode::Regular) },
     { "even_odd",       int(SlicingMode::EvenOdd) },
@@ -823,12 +830,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comExpert;
     def->set_default_value(new ConfigOptionBool(true));
 
-    def = this->add("only_one_perimeter_top", coBool);
+    def = this->add("only_one_perimeter_top", coEnum);
     def->label = L("Only one perimeter on top");
     def->category = L("Layers and Perimeters");
     def->tooltip = L("Use only one perimeter on flat top surface, to give more space to the top infill pattern.");
+    def->set_enum<OnePerimeterTopType>({
+        { "none",       L("Deactivated") },
+        { "top",        L("All top surfaces") },
+        { "topmost",    L("Topmost surface only") },
+    });
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionBool(false));
+    def->set_default_value(new ConfigOptionEnum<OnePerimeterTopType>(OnePerimeterTopType::None));
 
     def = this->add("extra_perimeters_on_overhangs", coBool);
     def->label = L("Extra perimeters on overhangs (Experimental)");
