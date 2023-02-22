@@ -283,14 +283,19 @@ static void fuzzy_extrusion_line(Arachne::ExtrusionLine &ext_lines, double fuzzy
 
 using PerimeterGeneratorLoops = std::vector<PerimeterGeneratorLoop>;
 
-static ExtrusionEntityCollection traverse_loops_classic(const PerimeterGenerator::Parameters &params, const Polygons &lower_slices_polygons_cache, const PerimeterGeneratorLoops &loops, ThickPolylines &thin_walls)
-{
+static ExtrusionEntityCollection traverse_loops_classic(
+    const PerimeterGenerator::Parameters    &params, 
+    const Polygons                          &lower_slices_polygons_cache, 
+    const PerimeterGeneratorLoops           &loops, 
+    ThickPolylines                          &thin_walls,
+    bool                                    no_external_perimeters
+) {
     // loops is an arrayref of ::Loop objects
     // turn each one into an ExtrusionLoop object
     ExtrusionEntityCollection   coll;
     Polygon                     fuzzified;
     for (const PerimeterGeneratorLoop &loop : loops) {
-        bool is_external = loop.is_external();
+        bool is_external = loop.is_external() && !no_external_perimeters;
         
         ExtrusionLoopRole loop_role;
         ExtrusionRole role_normal   = is_external ? ExtrusionRole::ExternalPerimeter : ExtrusionRole::Perimeter;
@@ -374,7 +379,7 @@ static ExtrusionEntityCollection traverse_loops_classic(const PerimeterGenerator
         } else {
             const PerimeterGeneratorLoop &loop = loops[idx.first];
             assert(thin_walls.empty());
-            ExtrusionEntityCollection children = traverse_loops_classic(params, lower_slices_polygons_cache, loop.children, thin_walls);
+            ExtrusionEntityCollection children = traverse_loops_classic(params, lower_slices_polygons_cache, loop.children, thin_walls, no_external_perimeters);
             out.entities.reserve(out.entities.size() + children.entities.size() + 1);
             ExtrusionLoop *eloop = static_cast<ExtrusionLoop*>(coll.entities[idx.first]);
             coll.entities[idx.first] = nullptr;
@@ -494,15 +499,19 @@ struct PerimeterGeneratorArachneExtrusion
     bool fuzzify = false;
 };
 
-static ExtrusionEntityCollection traverse_extrusions(const PerimeterGenerator::Parameters &params, const Polygons &lower_slices_polygons_cache, std::vector<PerimeterGeneratorArachneExtrusion> &pg_extrusions)
-{
+static ExtrusionEntityCollection traverse_extrusions(
+    const PerimeterGenerator::Parameters            &params, 
+    const Polygons                                  &lower_slices_polygons_cache, 
+    std::vector<PerimeterGeneratorArachneExtrusion> &pg_extrusions, 
+    bool                                            no_external_perimeters
+) {
     ExtrusionEntityCollection extrusion_coll;
     for (PerimeterGeneratorArachneExtrusion &pg_extrusion : pg_extrusions) {
         Arachne::ExtrusionLine *extrusion = pg_extrusion.extrusion;
         if (extrusion->empty())
             continue;
 
-        const bool    is_external = extrusion->inset_idx == 0;
+        const bool    is_external = extrusion->inset_idx == 0 && !no_external_perimeters;
         ExtrusionRole role_normal   = is_external ? ExtrusionRole::ExternalPerimeter : ExtrusionRole::Perimeter;
         ExtrusionRole role_overhang = role_normal | ExtrusionRoleModifier::Bridge;
 
@@ -1090,6 +1099,7 @@ void PerimeterGenerator::process_arachne(
     const ExPolygons           *surface_polygons,
     const ExPolygons           *lower_slices,
     int                        loop_number,
+    bool                       no_external_perimeters,
     // Cache:
     Polygons                   &lower_slices_polygons_cache,
     // Output:
@@ -1272,7 +1282,7 @@ void PerimeterGenerator::process_arachne(
         }
     }
 
-    if (ExtrusionEntityCollection extrusion_coll = traverse_extrusions(params, lower_slices_polygons_cache, ordered_extrusions); !extrusion_coll.empty())
+    if (ExtrusionEntityCollection extrusion_coll = traverse_extrusions(params, lower_slices_polygons_cache, ordered_extrusions, no_external_perimeters); !extrusion_coll.empty())
         out_loops.append(extrusion_coll);
 
     ExPolygons    infill_contour = union_ex(wallToolPaths.getInnerContour());
@@ -1459,12 +1469,12 @@ void PerimeterGenerator::process_classic(
 	                // outer contour may overlap with itself.
 	                //FIXME evaluate the overlaps, annotate each point with an overlap depth,
                     // compensate for the depth of intersection.
-                    contours[i].emplace_back(expolygon.contour, (no_external_perimeters ? i + 1 : i), true, fuzzify_contours);
+                    contours[i].emplace_back(expolygon.contour, i, true, fuzzify_contours);
 
                     if (! expolygon.holes.empty()) {
                         holes[i].reserve(holes[i].size() + expolygon.holes.size());
                         for (const Polygon &hole : expolygon.holes)
-                            holes[i].emplace_back(hole, (no_external_perimeters ? i + 1 : i), false, fuzzify_holes);
+                            holes[i].emplace_back(hole, i, false, fuzzify_holes);
                     }
                 }
             }
@@ -1531,7 +1541,7 @@ void PerimeterGenerator::process_classic(
             }
         }
         // at this point, all loops should be in contours[0]
-        ExtrusionEntityCollection entities = traverse_loops_classic(params, lower_slices_polygons_cache, contours.front(), thin_walls);
+        ExtrusionEntityCollection entities = traverse_loops_classic(params, lower_slices_polygons_cache, contours.front(), thin_walls, no_external_perimeters);
         // if brim will be printed, reverse the order of perimeters so that
         // we continue inwards after having finished the brim
         // TODO: add test for perimeter order
