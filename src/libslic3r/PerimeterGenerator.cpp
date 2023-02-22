@@ -1089,6 +1089,7 @@ void PerimeterGenerator::process_arachne(
     const Parameters           &params,
     const Surface              &surface,
     const ExPolygons           *lower_slices,
+    int                        loop_number,
     // Cache:
     Polygons                   &lower_slices_polygons_cache,
     // Output:
@@ -1117,10 +1118,6 @@ void PerimeterGenerator::process_arachne(
         lower_slices_polygons_cache = offset(*lower_slices, float(scale_(+nozzle_diameter/2)));
     }
 
-    // we need to process each island separately because we might have different
-    // extra perimeters for each one
-    // detect how many perimeters must be generated for this island
-    int        loop_number = params.config.perimeters + surface.extra_perimeters - 1; // 0-indexed loops
     ExPolygons last        = offset_ex(surface.expolygon.simplify_p(params.scaled_resolution), - float(ext_perimeter_width / 2. - ext_perimeter_spacing / 2.));
     Polygons   last_p      = to_polygons(last);
 
@@ -1334,6 +1331,7 @@ void PerimeterGenerator::process_classic(
     const Parameters           &params,
     const Surface              &surface,
     const ExPolygons           *lower_slices,
+    int                        loop_number,
     // Cache:
     Polygons                   &lower_slices_polygons_cache,
     // Output:
@@ -1377,10 +1375,6 @@ void PerimeterGenerator::process_classic(
         lower_slices_polygons_cache = offset(*lower_slices, float(scale_(+nozzle_diameter/2)));
     }
 
-    // we need to process each island separately because we might have different
-    // extra perimeters for each one
-    // detect how many perimeters must be generated for this island
-    int        loop_number = params.config.perimeters + surface.extra_perimeters - 1;  // 0-indexed loops
     ExPolygons last        = union_ex(surface.expolygon.simplify_p(params.scaled_resolution));
     ExPolygons gaps;
     if (loop_number >= 0) {

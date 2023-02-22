@@ -9,6 +9,7 @@
 #include "BoundingBox.hpp"
 #include "SVG.hpp"
 
+#include <algorithm>
 #include <string>
 #include <map>
 
@@ -103,6 +104,7 @@ void LayerRegion::make_perimeters(
 
     // Cummulative sum of polygons over all the regions.
     const ExPolygons *lower_slices = this->layer()->lower_layer ? &this->layer()->lower_layer->lslices : nullptr;
+    const ExPolygons *upper_slices = this->layer()->upper_layer ? &this->layer()->upper_layer->lslices : nullptr;
     // Cache for offsetted lower_slices
     Polygons          lower_layer_polygons_cache;
 
@@ -110,12 +112,48 @@ void LayerRegion::make_perimeters(
         auto perimeters_begin      = uint32_t(m_perimeters.size());
         auto gap_fills_begin       = uint32_t(m_thin_fills.size());
         auto fill_expolygons_begin = uint32_t(fill_expolygons.size());
+
+        // we need to process each island separately because we might have different
+        // extra perimeters for each one
+        // detect how many perimeters must be generated for this island
+        int loop_number = params.config.perimeters + surface.extra_perimeters - 1; // 0-indexed loops
+
+        // If we are on the topmost layer and only_one_perimeter_top is active
+        // directly switch to only 1 perimeter (if before we had more than 1)
+        if (loop_number > 0 && params.config.only_one_perimeter_top != OnePerimeterTopType::None && upper_slices == nullptr) {
+            loop_number = 0;
+        }
+
+        // If we have more than one perimeter
+        // and the parameter only_one_perimeter_top active for all surfaces
+        // and are not on the topmost layer
+        if (loop_number > 0 && params.config.only_one_perimeter_top == OnePerimeterTopType::TopSurfaces && upper_slices != nullptr) {
+            ExPolygons current_polygons = union_ex(surface.expolygon.simplify_p(params.scaled_resolution));
+            coord_t ext_perimeter_spacing = params.ext_perimeter_flow.scaled_spacing();
+            coord_t perimeter_width = params.perimeter_flow.scaled_width();
+
+            // Split the polygons into top surface/not top surface
+
+            // Don't take too thin areas into account
+            double min_width_top_surface = std::max(double(ext_perimeter_spacing / 2 + 10), double(perimeter_width * 2));
+            ExPolygons grown_upper_slices = expand_ex(*upper_slices, min_width_top_surface);
+
+            // Get the part of the current layer that is pure top surface
+            ExPolygons top_surface_polygons = diff_ex(current_polygons, grown_upper_slices, ApplySafetyOffset::Yes);
+            
+            // If we have a top-surface we switch to only one perimeter
+            if (!top_surface_polygons.empty()) {
+                loop_number = 0;
+            }
+        }
+
         if (this->layer()->object()->config().perimeter_generator.value == PerimeterGeneratorType::Arachne && !spiral_vase)
             PerimeterGenerator::process_arachne(
                 // input:
                 params,
                 surface,
                 lower_slices,
+                loop_number,
                 lower_layer_polygons_cache,
                 // output:
                 m_perimeters,
@@ -127,6 +165,7 @@ void LayerRegion::make_perimeters(
                 params,
                 surface,
                 lower_slices,
+                loop_number,
                 lower_layer_polygons_cache,
                 // output:
                 m_perimeters,
