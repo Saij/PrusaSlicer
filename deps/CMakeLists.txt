@@ -68,7 +68,7 @@ endif ()
 # option(DEP_BUILD_IGL_STATIC "Build IGL as a static library. Might cause link errors and increase binary size." OFF)
 
 message(STATUS "PrusaSlicer deps DESTDIR: ${DESTDIR}")
-message(STATUS "PrusaSlicer dowload dir for source packages: ${DEP_DOWNLOAD_DIR}")
+message(STATUS "PrusaSlicer download dir for source packages: ${DEP_DOWNLOAD_DIR}")
 message(STATUS "PrusaSlicer deps debug build: ${DEP_DEBUG}")
 
 find_package(Git REQUIRED)
