@@ -174,7 +174,7 @@ jobs:
         name: Checking out
       - uses: ilammy/msvc-dev-cmd@v1
         name: Configuring build environment
-        with:
+        with: 
           arch: ${{ matrix.arch }}
       - name: Hashing dependency CMake files
         id: dep_cmake_hash
