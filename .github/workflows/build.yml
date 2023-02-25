@@ -162,7 +162,7 @@ jobs:
   ###########
   windows:
     name: Building Windows binary
-    runs-on: windows-2019
+    runs-on: windows-2022
     needs: [global]
 
     strategy:
@@ -176,7 +176,8 @@ jobs:
         name: Configuring build environment
         with:
           toolset: 16.0
-          arch: x64
+          arch: ${{ matrix.arch }}
+          vsversion: "2019"
       - name: Hashing dependency CMake files
         id: dep_cmake_hash
         run: echo "dep_cmake_hash=${{ hashFiles('./deps/**') }}" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
@@ -194,7 +195,7 @@ jobs:
       - name: Configuring dependencies
         if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         working-directory: ./deps/build
-        run: cmake .. -G "Visual Studio 16 2019" -A ${{ matrix.arch }} -DDESTDIR="${{ github.workspace }}\deps\build"
+        run: cmake .. -G "Visual Studio 16 2019" -DDESTDIR="${{ github.workspace }}\deps\build"
       - name: Building dependencies
         if: ${{ success() && steps.cache.outputs.cache-hit != 'true' }}
         working-directory: ./deps/build
@@ -203,7 +204,7 @@ jobs:
       - name: Configuring PrusaSlicer
         if: ${{ success() }}
         working-directory: ./build
-        run: cmake .. -G "Visual Studio 16 2019" -A ${{ matrix.arch }} -DCMAKE_PREFIX_PATH="${{ github.workspace }}\deps\build\usr\loca"
+        run: cmake .. -G "Visual Studio 16 2019" -DCMAKE_PREFIX_PATH="${{ github.workspace }}\deps\build\usr\loca"
       - name: Building PrusaSlicer
         if: ${{ success() }}
         working-directory: ./build
