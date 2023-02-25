@@ -51,6 +51,7 @@ jobs:
       - name: Preparing build directories
         run: |
           mkdir ./deps/build
+          mkdir ./deps/out
           mkdir ./build
           mkdir ./build/pack
           mkdir ./build/pack/$PROJECT_NAME
@@ -64,13 +65,13 @@ jobs:
         name: Getting dependency cache
         id: cache
         with:
-          path: ./deps/build
+          path: ./deps/out
           key: ${{ runner.os }}-${{ matrix.arch }}-build-deps-${{ steps.dep_cmake_hash.outputs.dep_cmake_hash }}
 
       - name: Configuring dependencies
         if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         working-directory: ./deps/build
-        run: cmake .. -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
+        run: cmake .. -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}" -DDESTDIR="${{ github.workspace }}/deps/out"
       - name: Building dependencies
         if: ${{ success() && steps.cache.outputs.cache-hit != 'true' }}
         working-directory: ./deps/build
@@ -81,7 +82,7 @@ jobs:
       - name: Configuring PrusaSlicer
         if: ${{ success() }}
         working-directory: ./build
-        run: cmake .. -DCMAKE_PREFIX_PATH="$PWD/../deps/build/destdir/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DSLIC3R_STATIC=1 -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
+        run: cmake .. -DCMAKE_PREFIX_PATH="$${{ github.workspace }}/deps/out/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DSLIC3R_STATIC=1 -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
       - name: Building PrusaSlicer
         if: ${{ success() }}
         working-directory: ./build
@@ -182,18 +183,19 @@ jobs:
       - name: Creating build directories
         run: |
           mkdir C:\out\deps\build
+          mkdir C:\out\deps\out
           mkdir C:\out\build
 
       - uses: actions/cache@v3
         name: Getting dependency cache
         id: cache
         with:
-          path: C:\out\deps\build
+          path: C:\out\deps\out
           key: ${{ runner.os }}-${{ matrix.arch }}-build-deps-${{ steps.dep_cmake_hash.outputs.dep_cmake_hash }}
       - name: Configuring dependencies
         if: ${{ steps.cache.outputs.cache-hit != 'true' }}
         working-directory: C:\out\deps\build
-        run: cmake ${{ github.workspace }}\deps -G "Visual Studio 16 2019" -DDESTDIR="C:\out\deps\build"
+        run: cmake ${{ github.workspace }}\deps -G "Visual Studio 16 2019" -DDESTDIR="C:\out\deps\out"
       - name: Building dependencies
         if: ${{ success() && steps.cache.outputs.cache-hit != 'true' }}
         working-directory: C:\out\deps\build
@@ -202,7 +204,7 @@ jobs:
       - name: Configuring PrusaSlicer
         if: ${{ success() }}
         working-directory: C:\out\build
-        run: cmake .. -G "Visual Studio 16 2019" -DCMAKE_PREFIX_PATH="C:\out\deps\build\usr\loca"
+        run: cmake .. -G "Visual Studio 16 2019" -DCMAKE_PREFIX_PATH="C:\out\deps\out\usr\loca"
       - name: Building PrusaSlicer
         if: ${{ success() }}
         working-directory: C:\out\build
