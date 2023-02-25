@@ -162,7 +162,7 @@ jobs:
   ###########
   windows:
     name: Building Windows binary
-    runs-on: windows-2022
+    runs-on: windows-latest
     needs: [global]
 
     strategy:
@@ -177,7 +177,6 @@ jobs:
         with:
           toolset: 16.0
           arch: ${{ matrix.arch }}
-          vsversion: "2019"
       - name: Hashing dependency CMake files
         id: dep_cmake_hash
         run: echo "dep_cmake_hash=${{ hashFiles('./deps/**') }}" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
