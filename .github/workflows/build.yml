@@ -174,6 +174,9 @@ jobs:
         name: Checking out
       - uses: ilammy/msvc-dev-cmd@v1
         name: Configuring build environment
+        with:
+          toolset: 16.0
+          arch: x64
       - name: Hashing dependency CMake files
         id: dep_cmake_hash
         run: echo "dep_cmake_hash=${{ hashFiles('./deps/**') }}" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
