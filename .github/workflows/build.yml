@@ -354,7 +354,7 @@ jobs:
         if: ${{ success() }}
         working-directory: ./build/pack
         run: tar -cvfj ../build.tar.bz2 .
-      -name: Uploading artifact
+      - name: Uploading artifact
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
         with:
