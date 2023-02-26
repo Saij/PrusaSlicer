@@ -265,7 +265,7 @@ jobs:
     strategy:
       matrix:
         arch: [x64]
-        gtk: [GTK2, GTK3]
+        gtk: [GTK2, GTK3] 
 
     steps:
       - uses: actions/checkout@v3
