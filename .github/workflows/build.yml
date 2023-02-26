@@ -82,7 +82,7 @@ jobs:
       - name: Configuring PrusaSlicer
         if: ${{ success() }}
         working-directory: ./build
-        run: cmake .. -DCMAKE_PREFIX_PATH="$${{ github.workspace }}/deps/out/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DSLIC3R_STATIC=1 -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
+        run: cmake .. -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps/out/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DSLIC3R_STATIC=1 -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
       - name: Building PrusaSlicer
         if: ${{ success() }}
         working-directory: ./build
@@ -204,7 +204,7 @@ jobs:
       - name: Configuring PrusaSlicer
         if: ${{ success() }}
         working-directory: C:\out\build
-        run: cmake .. -G "Visual Studio 16 2019" -DCMAKE_PREFIX_PATH="C:\out\deps\out\usr\loca"
+        run: cmake ${{ github.workspace }} -G "Visual Studio 16 2019" -DCMAKE_PREFIX_PATH="C:\out\deps\out\usr\loca"
       - name: Building PrusaSlicer
         if: ${{ success() }}
         working-directory: C:\out\build
