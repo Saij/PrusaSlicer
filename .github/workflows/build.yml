@@ -352,7 +352,7 @@ jobs:
       - name: Packaging
         if: ${{ success() }}
         working-directory: ./build/pack
-        run: tar -cvfj ../build.tar.bz2 .
+        run: tar -cjvf ../build.tar.bz2 .
       - name: Uploading artifact
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
