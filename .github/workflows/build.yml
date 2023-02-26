@@ -348,7 +348,7 @@ jobs:
         working-directory: ./build
         run: |
           echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/$PROJECT_NAME" "$@"' > pack/$PROJECT_NAME
-          chmod ug+x bin/$PROJECT_NAME
+          chmod ug+x pack/bin/$PROJECT_NAME
       - name: Packaging
         if: ${{ success() }}
         working-directory: ./build/pack
