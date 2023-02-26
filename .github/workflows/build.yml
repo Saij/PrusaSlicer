@@ -322,12 +322,12 @@ jobs:
         if: ${{ success() && steps.cache.outputs.cache-hit != 'true' }}
         working-directory: ./deps/build
         run: make -j2
-      - name: Renaming wxscintilla library
-        if: ${{ success() }}
-        working-directory: ./deps/out/usr/local/lib
-        run: |
-          cp libwxscintilla-3.1.a libwx_gtk2u_scintilla-3.1.a
-          cp libwxscintilla-3.1.a libwx_gtk3u_scintilla-3.1.a
+      #- name: Renaming wxscintilla library
+      #  if: ${{ success() }}
+      #  working-directory: ./deps/out/usr/local/lib
+      #  run: |
+      #    cp libwxscintilla-3.1.a libwx_gtk2u_scintilla-3.1.a
+      #    cp libwxscintilla-3.1.a libwx_gtk3u_scintilla-3.1.a
 
       - name: Configuring PrusaSlicer (GTK2)
         if: ${{ success() && matrix.gtk == 'GTK2' }}
