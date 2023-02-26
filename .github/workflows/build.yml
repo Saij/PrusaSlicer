@@ -14,7 +14,7 @@ jobs:
   ##########
   global:
     name: Define global variables
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     outputs:
       date: ${{ steps.date.outputs.date }}
 
@@ -22,6 +22,8 @@ jobs:
       - name: Getting current date
         id: date
         run: echo "date=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+      - name: Get aclocal dir
+        run: which aclocal
 
   ########################
   # MacOS (x86_64/arm64) #
@@ -309,7 +311,7 @@ jobs:
         if: ${{ steps.cache.outputs.cache-hit != 'true' && matrix.gtk == 'GTK2' }}
         working-directory: ./deps/build
         run: cmake .. -DDESTDIR="${{ github.workspace }}/deps/out"
-      - name: Configuring dependencies with GTK3
+      - name: Configuring dependencies (GTK3)
         if: ${{ steps.cache.outputs.cache-hit != 'true' && matrix.gtk == 'GTK3' }}
         working-directory: ./deps/build
         run: cmake .. -DDESTDIR="${{ github.workspace }}/deps/out" -DDEP_WX_GTK3=ON
@@ -404,4 +406,25 @@ jobs:
         with:
           name: PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
           path: ./build/build.AppImage
+          if-no-files-found: error
+
+  ########################
+  # Artifact combination #
+  ########################
+  artifact_combination:
+    name: Combining artifacts
+    runs-on: ubuntu-22.04
+    needs: [linux, windows, macos-dmg]
+
+    steps:
+      - name: Downloading artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: ./
+      - name: Re-Upload artifacts
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: combined-artifacts
+          path: ./
           if-no-files-found: error
