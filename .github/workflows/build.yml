@@ -251,7 +251,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
-          path: build.zip
+          path: C:\out\pack\build.zip
           if-no-files-found: error
 
   #########
@@ -322,12 +322,6 @@ jobs:
         if: ${{ success() && steps.cache.outputs.cache-hit != 'true' }}
         working-directory: ./deps/build
         run: make -j2
-      #- name: Renaming wxscintilla library
-      #  if: ${{ success() }}
-      #  working-directory: ./deps/out/usr/local/lib
-      #  run: |
-      #    cp libwxscintilla-3.1.a libwx_gtk2u_scintilla-3.1.a
-      #    cp libwxscintilla-3.1.a libwx_gtk3u_scintilla-3.1.a
 
       - name: Configuring PrusaSlicer (GTK2)
         if: ${{ success() && matrix.gtk == 'GTK2' }}
@@ -347,7 +341,7 @@ jobs:
         working-directory: ./build
         run: |
           cp -Rf ../resources pack/resources
-          cp -f src/PrusaSlicer pack/bin/$PROJECT_NAME
+          cp -f src/prusa-slicer pack/bin/$PROJECT_NAME
           find pack/resources/localization -name "*.po" -type f -delete
       - name: Creating binary
         if: ${{ success() }}
@@ -363,7 +357,7 @@ jobs:
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
         with:
-          name: PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.bz2
+          name: PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.tar.bz2
           path: ./build/build.tar.bz2
           if-no-files-found: error
 
@@ -417,17 +411,43 @@ jobs:
   artifact_combination:
     name: Combining artifacts
     runs-on: ubuntu-22.04
-    needs: [linux, windows, macos-dmg]
+    needs: [global, linux, windows, macos-dmg]
 
     steps:
-      - name: Downloading artifacts
+      - name: Downloading MacOS artifact
         uses: actions/download-artifact@v3
         with:
-          path: ./
+          name: PrusaSlicer-${{ github.ref_name }}+MacOS-universal-${{ needs.global.outputs.date }}.dmg
+          path: PrusaSlicer-${{ github.ref_name }}+MacOS-universal-${{ needs.global.outputs.date }}.dmg
+      - name: Downloading Windows artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
+          path: PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
+      - name: Downloading Linux x64 GTK2 AppImage artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK2-${{ needs.global.outputs.date }}.AppImage
+          path: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK2-${{ needs.global.outputs.date }}.AppImage
+      - name: Downloading Linux x64 GTK2 Tar artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK2-${{ needs.global.outputs.date }}.tar.bz2
+          path: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK2-${{ needs.global.outputs.date }}.tar.bz2
+      - name: Downloading Linux x64 GTK3 AppImage artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK3-${{ needs.global.outputs.date }}.AppImage
+          path: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK3-${{ needs.global.outputs.date }}.AppImage
+      - name: Downloading Linux x64 GTK3 Tar artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK3-${{ needs.global.outputs.date }}.tar.bz2
+          path: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK3-${{ needs.global.outputs.date }}.tar.bz2
       - name: Re-Upload artifacts
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
         with:
-          name: combined-artifacts
+          name: PrusaSlicer-${{ github.ref_name }}+Combined-${{ needs.global.outputs.date }}
           path: ./
           if-no-files-found: error
