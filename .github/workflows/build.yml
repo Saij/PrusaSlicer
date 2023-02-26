@@ -22,8 +22,6 @@ jobs:
       - name: Getting current date
         id: date
         run: echo "date=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
-      - name: Get aclocal dir
-        run: which aclocal
 
   ########################
   # MacOS (x86_64/arm64) #
@@ -290,6 +288,11 @@ jobs:
       - name: Install GTK3
         if: ${{ matrix.gtk == 'gtk3' }}
         run: sudo apt install libgtk-3-dev
+      - name: Symlink aclocal and automake
+        if: ${{ success() }}
+        run: |
+          sudo ln -s $(dirname $(which automake))/automake $(dirname $(which automake))/automake-1.15
+          sudo ln -s $(dirname $(which automake))/aclocal $(dirname $(which automake))/aclocal-1.15
 
       - name: Preparing build directories
         run: |
