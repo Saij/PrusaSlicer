@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - build
+    tags:
+      - '*'
 
 env:
   PROJECT_NAME: "PrusaSlicer-SE"
