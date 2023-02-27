@@ -277,8 +277,8 @@ jobs:
         id: dep_cmake_hash
         run: echo "dep_cmake_hash=${{ hashFiles('./deps/**') }}" >> $GITHUB_OUTPUT
 
-      - name: Update Clock
-        run: sudo hwclock -s
+      #- name: Update Clock
+      #  run: sudo hwclock -s
 
       - name: Update APT
         run: sudo apt update
