@@ -416,40 +416,20 @@ jobs:
     needs: [global, linux, windows, macos-dmg]
 
     steps:
-      - name: Downloading MacOS artifact
+      - name: Creating directories
+        run: |
+          mkdir ./artifacts
+          mkdir ./output
+      - name: Downloading artifacts
         uses: actions/download-artifact@v3
         with:
-          name: PrusaSlicer-${{ github.ref_name }}+MacOS-universal-${{ needs.global.outputs.date }}.dmg
-          path: PrusaSlicer-${{ github.ref_name }}+MacOS-universal-${{ needs.global.outputs.date }}.dmg
-      - name: Downloading Windows artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
-          path: PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
-      - name: Downloading Linux x64 GTK2 AppImage artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK2-${{ needs.global.outputs.date }}.AppImage
-          path: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK2-${{ needs.global.outputs.date }}.AppImage
-      - name: Downloading Linux x64 GTK2 Tar artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK2-${{ needs.global.outputs.date }}.tar.bz2
-          path: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK2-${{ needs.global.outputs.date }}.tar.bz2
-      - name: Downloading Linux x64 GTK3 AppImage artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK3-${{ needs.global.outputs.date }}.AppImage
-          path: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK3-${{ needs.global.outputs.date }}.AppImage
-      - name: Downloading Linux x64 GTK3 Tar artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK3-${{ needs.global.outputs.date }}.tar.bz2
-          path: PrusaSlicer-${{ github.ref_name }}+linux-x64-GTK3-${{ needs.global.outputs.date }}.tar.bz2
+          path: ./artifacts
+      - name: Moving artifacts
+        run: for i in $(find . -type f); mv $i ./output/; done
       - name: Re-Upload artifacts
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
         with:
           name: PrusaSlicer-${{ github.ref_name }}+Combined-${{ needs.global.outputs.date }}
-          path: ./
+          path: ./output/
           if-no-files-found: error
