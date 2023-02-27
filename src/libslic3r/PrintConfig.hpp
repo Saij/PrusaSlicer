@@ -577,6 +577,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat,                        bridge_speed))
     ((ConfigOptionBool,                         ensure_vertical_shell_thickness))
     ((ConfigOptionEnum<OnePerimeterTopType>,    only_one_perimeter_top))
+    ((ConfigOptionBool,                         only_one_perimeter_bottom))
     ((ConfigOptionEnum<InfillPattern>,          top_fill_pattern))
     ((ConfigOptionEnum<InfillPattern>,          bottom_fill_pattern))
     ((ConfigOptionFloatOrPercent,               external_perimeter_extrusion_width))

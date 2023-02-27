@@ -842,6 +842,13 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionEnum<OnePerimeterTopType>(OnePerimeterTopType::None));
 
+    def = this->add("only_one_perimeter_bottom", coBool);
+    def->label = L("Only one perimeter on bottom");
+    def->category = L("Layers and Perimeters");
+    def->tooltip = L("Use only one perimeter on the bottom surface, to give more space to the infill pattern.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("extra_perimeters_on_overhangs", coBool);
     def->label = L("Extra perimeters on overhangs (Experimental)");
     def->category = L("Layers and Perimeters");
