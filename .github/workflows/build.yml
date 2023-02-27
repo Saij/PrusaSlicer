@@ -281,7 +281,9 @@ jobs:
       - name: Update APT
         run: sudo apt update
       - name: Install needed packages
-        run: sudo apt install libglew-dev libudev-dev libdbus-1-dev curl libssl-dev libcurl4-openssl-dev m4
+        run: |
+          sudo add-apt-repository universe
+          sudo apt install libglew-dev libudev-dev libdbus-1-dev curl libssl-dev libcurl4-openssl-dev m4 libfuse2
       - name: Install GTK2
         if: ${{ matrix.gtk == 'gtk2' }}
         run: sudo apt install libgtk2.0-dev libwayland-dev libwayland-egl-backend-dev
