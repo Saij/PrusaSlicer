@@ -427,7 +427,7 @@ jobs:
         with:
           path: ./artifacts
       - name: Moving artifacts
-        run: for i in $(find . -type f); mv $i ./output/; done
+        run: for i in $(find . -type f); do mv $i ./output/; done
       - name: Re-Upload artifacts
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
