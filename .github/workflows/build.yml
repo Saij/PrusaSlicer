@@ -398,7 +398,7 @@ jobs:
         run: |
           ../appimage/appimagetool.AppImage .
           mv PrusaSlicer-SE-x86_64.AppImage ../build.AppImage
-          chmod +x ../build.AppImage
+          chmod +x ../PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
       - name: Uploading AppImage Artifact
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
