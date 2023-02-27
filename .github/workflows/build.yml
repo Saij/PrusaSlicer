@@ -249,10 +249,9 @@ jobs:
       - name: Uploading artifact
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
-        working-directory: C:\out\pack
         with:
           name: PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
-          path: PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
+          path: C:\out\pack\PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
           if-no-files-found: error
 
   #########
@@ -359,10 +358,9 @@ jobs:
       - name: Uploading artifact
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
-        working-directory: ./build
         with:
           name: PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.tar.bz2
-          path: PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.tar.bz2
+          path: ./build/PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.tar.bz2
           if-no-files-found: error
 
       - name: Downloading AppImage tool
@@ -404,10 +402,9 @@ jobs:
       - name: Uploading AppImage Artifact
         if: ${{ success() }}
         uses: actions/upload-artifact@v3
-        working-directory: ./build
         with:
           name: PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
-          path: PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
+          path: ./build/PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
           if-no-files-found: error
 
   ########################
