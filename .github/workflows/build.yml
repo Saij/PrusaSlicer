@@ -397,7 +397,7 @@ jobs:
         working-directory: ./build/pack
         run: |
           ../appimage/appimagetool.AppImage .
-          mv PrusaSlicer-SE-x86_64.AppImage ../build.AppImage
+          mv PrusaSlicer-SE-x86_64.AppImage ../PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
           chmod +x ../PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
       - name: Uploading AppImage Artifact
         if: ${{ success() }}
