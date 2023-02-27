@@ -384,13 +384,13 @@ jobs:
           mkdir -p usr/share/icons/hicolor/192x192/apps
           cp resources/icons/PrusaSlicer_192px.png usr/share/icons/hicolor/192x192/apps/$PROJECT_NAME.png
           cat <<EOF > $PROJECT_NAME.desktop
-            [Desktop Entry]
-            Name=$PROJECT_NAME
-            Exec=AppRun %F
-            Icon=$PROJECT_NAME
-            Type=Application
-            Categories=Utility;
-            MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;
+          [Desktop Entry]
+          Name=$PROJECT_NAME
+          Exec=AppRun %F
+          Icon=$PROJECT_NAME
+          Type=Application
+          Categories=Utility;
+          MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;
           EOF
       - name: Building AppImage
         if: ${{ success() }}
