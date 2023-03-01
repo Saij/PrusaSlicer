@@ -210,6 +210,7 @@ void LayerRegion::make_perimeters(
 
                 // Generate external perimeter for current surface
                 ExPolygons temp_infill;
+                ExtrusionEntityCollection temp_gap_fills;
                 run_perimeter_generator(
                     this->layer()->object()->config().perimeter_generator.value == PerimeterGeneratorType::Arachne && !spiral_vase,
                     // input:
@@ -221,13 +222,20 @@ void LayerRegion::make_perimeters(
                     lower_layer_polygons_cache,
                     // output:
                     m_perimeters,
-                    m_thin_fills,
+                    temp_gap_fills,
                     temp_infill
                 );
 
                 // Offset surface ext_perimeter_width inside
                 // to compensate for the already created external perimeter
-                surface_polygons = offset_ex(surface_polygons, -ext_perimeter_width);
+                //surface_polygons = offset_ex(surface_polygons, -ext_perimeter_width);
+                coord_t ext_min_spacing = coord_t(ext_perimeter_spacing * (1 - INSET_OVERLAP_TOLERANCE));
+                surface_polygons = params.config.thin_walls ? 
+                    offset2_ex(
+                        surface_polygons,
+                        - float(ext_perimeter_width / 2. + ext_min_spacing / 2. - 1),
+                        + float(ext_min_spacing / 2. - 1)) :
+                    offset_ex(surface_polygons, - float(ext_perimeter_width / 2.));
 
                 // Get the not-top surface, from the "real top" but enlarged by EXTERNAL_INFILL_MARGIN (and the min_width_top_surface we removed a bit before)
                 ExPolygons inner_polygons = diff_ex(surface_polygons, offset_ex(top_surface_polygons, offset_top_surface + min_width_top_surface), ApplySafetyOffset::Yes);
@@ -250,7 +258,7 @@ void LayerRegion::make_perimeters(
                     lower_layer_polygons_cache,
                     // output:
                     m_perimeters,
-                    m_thin_fills,
+                    temp_gap_fills,
                     fill_expolygons
                 );
 
