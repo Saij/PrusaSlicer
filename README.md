@@ -29,7 +29,7 @@ The command line interface is a thin wrapper over `libslic3r`.
 ### What are PrusaSlicer's main features?
 
 Key features are:
-
+ 
 * **multi-platform** (Linux/Mac/Win) and packaged as standalone-app with no dependencies required
 * complete **command-line interface** to use it with no GUI
 * multi-material **(multiple extruders)** object printing
