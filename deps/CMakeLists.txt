@@ -23,6 +23,11 @@
 project(PrusaSlicer-deps)
 cmake_minimum_required(VERSION 3.2)
 
+# Avoid warning about DOWNLOAD_EXTRACT_TIMESTAMP in CMake 3.24:
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 include(ExternalProject)
 include(ProcessorCount)
 
@@ -40,6 +45,22 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     option(DEP_WX_GTK3 "Build wxWidgets against GTK3" OFF)
 endif()
 
+set(IS_CROSS_COMPILE FALSE)
+
+if (APPLE)
+    set(CMAKE_FIND_FRAMEWORK LAST)
+    set(CMAKE_FIND_APPBUNDLE LAST)
+    list(FIND CMAKE_OSX_ARCHITECTURES ${CMAKE_SYSTEM_PROCESSOR} _arch_idx)
+    if (CMAKE_OSX_ARCHITECTURES AND _arch_idx LESS 0)
+        set(IS_CROSS_COMPILE TRUE)
+        set(CMAKE_CXX_COMPILER_ID "Clang")
+        string(REPLACE ";" "$<SEMICOLON>" CMAKE_OSX_ARCHS "${CMAKE_OSX_ARCHITECTURES}")
+        set(_cmake_osx_arch -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHS})
+        set(_cmake_args_osx_arch CMAKE_ARGS -DCMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHS})
+        message("Detect Cross-compilation. Will build for target ${CMAKE_OSX_ARCHS}" )
+    endif ()
+endif ()
+
 # On developer machines, it can be enabled to speed up compilation and suppress warnings coming from IGL. 
 # FIXME:
 # Enabling this option is not safe. IGL will compile itself with its own version of Eigen while
@@ -47,7 +68,7 @@ endif()
 # option(DEP_BUILD_IGL_STATIC "Build IGL as a static library. Might cause link errors and increase binary size." OFF)
 
 message(STATUS "PrusaSlicer deps DESTDIR: ${DESTDIR}")
-message(STATUS "PrusaSlicer dowload dir for source packages: ${DEP_DOWNLOAD_DIR}")
+message(STATUS "PrusaSlicer download dir for source packages: ${DEP_DOWNLOAD_DIR}")
 message(STATUS "PrusaSlicer deps debug build: ${DEP_DEBUG}")
 
 find_package(Git REQUIRED)
@@ -95,6 +116,7 @@ function(prusaslicer_add_cmake_project projectname)
             -DCMAKE_CXX_COMPILER:STRING=${CMAKE_CXX_COMPILER}
             -DCMAKE_TOOLCHAIN_FILE:STRING=${CMAKE_TOOLCHAIN_FILE}
             -DBUILD_SHARED_LIBS:BOOL=OFF
+            ${_cmake_osx_arch}
             "${_configs_line}"
             ${DEP_CMAKE_OPTS}
             ${P_ARGS_CMAKE_ARGS}
@@ -124,7 +146,7 @@ elseif (APPLE)
         set(DEP_OSX_TARGET "${CMAKE_OSX_DEPLOYMENT_TARGET}")
         message("OS X Deployment Target: ${DEP_OSX_TARGET}")
     else ()
-        # Attempt to infer the SDK version from the CMAKE_OSX_SYSROOT,
+        # Attempt to infer the SDK version from the CMAKE_OSX_SYSROOT,
         # this is done because wxWidgets need the min version explicitly set
         string(REGEX MATCH "[0-9]+[.][0-9]+[.]sdk$" DEP_OSX_TARGET "${CMAKE_OSX_SYSROOT}")
         string(REGEX MATCH "^[0-9]+[.][0-9]+" DEP_OSX_TARGET "${DEP_OSX_TARGET}")

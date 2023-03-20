@@ -1,0 +1,437 @@
+name: Build PrusaSlicer-SE
+
+on:
+  push:
+    branches:
+      - build
+    tags:
+      - '*'
+
+env:
+  PROJECT_NAME: "PrusaSlicer-SE"
+
+jobs:
+  ##########
+  # Global #
+  ##########
+  global:
+    name: Define global variables
+    runs-on: ubuntu-22.04
+    outputs:
+      date: ${{ steps.date.outputs.date }}
+
+    steps:
+      - name: Getting current date
+        id: date
+        run: echo "date=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+
+  ########################
+  # MacOS (x86_64/arm64) #
+  ########################
+  macos-build:
+    name: Building MacOS binaries
+    runs-on: macos-12
+
+    strategy:
+      matrix:
+        arch: [x86_64, arm64]
+
+    steps:
+      - uses: actions/checkout@v3
+        name: Checking out
+
+      - name: Hashing dependency CMake files
+        id: dep_cmake_hash
+        run: echo "dep_cmake_hash=${{ hashFiles('./deps/**') }}" >> $GITHUB_OUTPUT
+
+      - name: Install build depencies
+        run: |
+          brew install cmake git gettext automake
+          sudo ln -s $(brew --prefix)/bin/automake $(brew --prefix)/bin/automake-1.15
+          sudo ln -s $(brew --prefix)/bin/aclocal $(brew --prefix)/bin/aclocal-1.15
+
+      - name: Preparing build directories
+        run: |
+          mkdir ./deps/build
+          mkdir ./deps/out
+          mkdir ./build
+          mkdir ./build/pack
+          mkdir ./build/pack/$PROJECT_NAME
+          mkdir ./build/pack/$PROJECT_NAME/$PROJECT_NAME.app
+          mkdir ./build/pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents
+          mkdir ./build/pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/_CodeSignature
+          mkdir ./build/pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/Frameworks
+          mkdir ./build/pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/MacOS
+
+      - uses: actions/cache@v3
+        name: Getting dependency cache
+        id: cache
+        with:
+          path: ./deps/out
+          key: ${{ runner.os }}-${{ matrix.arch }}-build-deps-${{ steps.dep_cmake_hash.outputs.dep_cmake_hash }}
+
+      - name: Configuring dependencies
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        working-directory: ./deps/build
+        run: cmake .. -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}" -DDESTDIR="${{ github.workspace }}/deps/out"
+      - name: Building dependencies
+        if: ${{ success() && steps.cache.outputs.cache-hit != 'true' }}
+        working-directory: ./deps/build
+        run: |
+          export LIBRARY_PATH=$LIBRARY_PATH:$(brew --prefix zstd)/lib/
+          make -j2
+      
+      - name: Configuring PrusaSlicer
+        if: ${{ success() }}
+        working-directory: ./build
+        run: cmake .. -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps/out/usr/local" -DCMAKE_OSX_DEPLOYMENT_TARGET="10.14" -DSLIC3R_STATIC=1 -DCMAKE_OSX_ARCHITECTURES="${{ matrix.arch }}"
+      - name: Building PrusaSlicer
+        if: ${{ success() }}
+        working-directory: ./build
+        run: |
+          export LIBRARY_PATH=$LIBRARY_PATH:$(brew --prefix zstd)/lib/
+          make -j2
+
+      - name: Packing executable
+        if: ${{ success() }} 
+        working-directory: ./build
+        run: |
+          cp -Rf ../resources pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/Resources
+          cp pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/Resources/icons/PrusaSlicer.icns pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/resources/PrusaSlicer.icns
+          cp src/Info.plist pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/Info.plist
+          echo -n -e 'APPL????\x0a' > pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/PkgInfo
+          find pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/Resources/localization -name "*.po" -type f -delete
+          cp -f src/PrusaSlicer pack/$PROJECT_NAME/$PROJECT_NAME.app/Contents/MacOS/$PROJECT_NAME
+
+      - name: Upload APP artifact
+        if: ${{ success() }} 
+        uses: actions/upload-artifact@v3
+        with:
+          name: MacOS_PrusaSlicer-SE-${{ matrix.arch }}
+          path: ./build/pack/PrusaSlicer-SE/
+
+  macos-dmg:
+    name: Building MacOS unversial DMG
+    runs-on: macos-12
+    needs: [global, macos-build]
+
+    steps:
+      - name: Downloading x86_64 artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: MacOS_PrusaSlicer-SE-x86_64
+          path: PrusaSlicer-SE-x86_64
+      - name: Downloading arm64 artifact
+        if: ${{ success() }} 
+        uses: actions/download-artifact@v3
+        with:
+          name: MacOS_PrusaSlicer-SE-arm64
+          path: PrusaSlicer-SE-arm64
+
+      - name: Create copy of x86_64 package
+        if: ${{ success() }} 
+        run: cp -rf PrusaSlicer-SE-x86_64 $PROJECT_NAME
+
+      - name: Build universal binary
+        if: ${{ success() }}
+        run: |
+          lipo -create -output $PROJECT_NAME/$PROJECT_NAME.app/Contents/MacOS/$PROJECT_NAME PrusaSlicer-SE-arm64/$PROJECT_NAME.app/Contents/MacOS/$PROJECT_NAME PrusaSlicer-SE-x86_64/$PROJECT_NAME.app/Contents/MacOS/$PROJECT_NAME
+          chmod u+x $PROJECT_NAME/$PROJECT_NAME.app/Contents/MacOS/$PROJECT_NAME
+
+      - name: Creating DMG file
+        if: ${{ success() }}
+        run: |
+          hdiutil create -ov -fs HFS+ -volname "$PROJECT_NAME" -srcfolder "$PROJECT_NAME" temp.dmg
+          hdiutil convert temp.dmg -format UDZO -o PrusaSlicer-${{ github.ref_name }}+MacOS-universal-${{ needs.global.outputs.date }}.dmg
+
+      - name: Uploading artifact
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+MacOS-universal-${{ needs.global.outputs.date }}.dmg
+          path: PrusaSlicer-${{ github.ref_name }}+MacOS-universal-${{ needs.global.outputs.date }}.dmg
+          if-no-files-found: error
+
+      - uses: geekyeggo/delete-artifact@v2
+        if: ${{ success() }}
+        name: Cleanup artifacts
+        with:
+          name: |
+            MacOS_PrusaSlicer-SE-x86_64
+            MacOS_PrusaSlicer-SE-arm64
+
+  ###########
+  # Windows #
+  ###########
+  windows:
+    name: Building Windows binary
+    runs-on: windows-2019
+    needs: [global]
+
+    strategy:
+      matrix:
+        arch: [x64]
+
+    steps:
+      - uses: actions/checkout@v3
+        name: Checking out
+      - uses: ilammy/msvc-dev-cmd@v1
+        name: Configuring build environment
+        with: 
+          arch: ${{ matrix.arch }}
+      - name: Hashing dependency CMake files
+        id: dep_cmake_hash
+        run: echo "dep_cmake_hash=${{ hashFiles('./deps/**') }}" | Out-File -FilePath $Env:GITHUB_OUTPUT -Encoding utf8 -Append
+      - name: Creating build directories
+        run: |
+          mkdir C:\out\deps\build
+          mkdir C:\out\deps\out
+          mkdir C:\out\build
+          mkdir C:\out\pack
+
+      - uses: actions/cache@v3
+        name: Getting dependency cache
+        id: cache
+        with:
+          path: C:\out\deps\out
+          key: ${{ runner.os }}-${{ matrix.arch }}-build-deps-${{ steps.dep_cmake_hash.outputs.dep_cmake_hash }}
+      - name: Configuring dependencies
+        if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+        working-directory: C:\out\deps\build
+        run: cmake ${{ github.workspace }}\deps -G "Visual Studio 16 2019" -DDESTDIR="C:\out\deps\out"
+      - name: Building dependencies
+        if: ${{ success() && steps.cache.outputs.cache-hit != 'true' }}
+        working-directory: C:\out\deps\build
+        run: msbuild /m ALL_BUILD.vcxproj /p:Configuration=Release
+
+      - name: Configuring PrusaSlicer
+        if: ${{ success() }}
+        working-directory: C:\out\build
+        run: cmake ${{ github.workspace }} -G "Visual Studio 16 2019" -DCMAKE_PREFIX_PATH="C:\out\deps\out\usr\local"
+      - name: Building PrusaSlicer
+        if: ${{ success() }}
+        working-directory: C:\out\build
+        run: msbuild /m ALL_BUILD.vcxproj /p:Configuration=Release
+
+      - name: Download runtime
+        if: ${{ success() }}
+        working-directory: C:\out\pack
+        shell: powershell
+        run: '(new-object System.Net.WebClient).DownloadFile("https://github.com/Saij/PrusaSlicer_Runtime/releases/download/win64_runtime/win64_runtime.zip", "win64_runtime.zip")'
+      - name: Extract runtime
+        if: ${{ success() }}
+        working-directory: C:\out\pack
+        shell: cmd
+        run: '"C:/Program Files/7-Zip/7z.exe" x win64_runtime.zip'
+      - name: Remove runtime ZIP
+        if: ${{ success() }}
+        working-directory: C:\out\pack
+        shell: cmd
+        run: del win64_runtime.zip
+
+      - name: Copy built files
+        if: ${{ success() }}
+        shell: cmd
+        working-directory: C:\out\build
+        run: |
+          xcopy /RCYIE src\Release\*.dll C:\out\pack\
+          xcopy /RCYIE src\Release\*.exe C:\out\pack\
+          del C:\out\pack\opengl32.dll
+      - name: Copy resources
+        working-directory: ${{ github.workspace }}
+        shell: cmd
+        run: xcopy /RCYIE resources C:\out\pack\resources
+
+      - name: Create package
+        if: ${{ success() }}
+        working-directory: C:\out\pack
+        shell: cmd
+        run: '"C:/Program Files/7-Zip/7z.exe" a -tzip PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip *'
+
+      - name: Uploading artifact
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
+          path: C:\out\pack\PrusaSlicer-${{ github.ref_name }}+win64-${{ needs.global.outputs.date }}.zip
+          if-no-files-found: error
+
+  #########
+  # Linux #
+  #########
+  linux:
+    name: Building Linux binary
+    runs-on: ubuntu-22.04
+    needs: [global]
+
+    strategy:
+      matrix:
+        arch: [x64]
+        gtk: [GTK2, GTK3] 
+
+    steps:
+      - uses: actions/checkout@v3
+        name: Checking out
+
+      - name: Hashing dependency CMake files
+        id: dep_cmake_hash
+        run: echo "dep_cmake_hash=${{ hashFiles('./deps/**') }}" >> $GITHUB_OUTPUT
+
+      #- name: Update Clock
+      #  run: sudo hwclock -s
+
+      - name: Update APT
+        run: sudo apt update
+      - name: Install needed packages
+        run: |
+          sudo add-apt-repository universe
+          sudo apt install libglew-dev libudev-dev libdbus-1-dev curl libssl-dev libcurl4-openssl-dev m4 libfuse2
+      - name: Install GTK2
+        if: ${{ matrix.gtk == 'gtk2' }}
+        run: sudo apt install libgtk2.0-dev libwayland-dev libwayland-egl-backend-dev
+      - name: Install GTK3
+        if: ${{ matrix.gtk == 'gtk3' }}
+        run: sudo apt install libgtk-3-dev
+      - name: Symlink aclocal and automake
+        if: ${{ success() }}
+        run: |
+          sudo ln -s $(dirname $(which automake))/automake $(dirname $(which automake))/automake-1.15
+          sudo ln -s $(dirname $(which automake))/aclocal $(dirname $(which automake))/aclocal-1.15
+
+      - name: Preparing build directories
+        run: |
+          mkdir ./deps/build
+          mkdir ./deps/out
+          mkdir ./build
+          mkdir ./build/pack
+          mkdir ./build/pack/bin
+          mkdir ./build/appimage
+
+      - uses: actions/cache@v3
+        name: Getting dependency cache
+        id: cache
+        with:
+          path: ./deps/out
+          key: ${{ runner.os }}-${{ matrix.arch }}-${{ matrix.gtk }}-build-deps-${{ steps.dep_cmake_hash.outputs.dep_cmake_hash }}
+
+      - name: Configuring dependencies (GTK2)
+        if: ${{ steps.cache.outputs.cache-hit != 'true' && matrix.gtk == 'GTK2' }}
+        working-directory: ./deps/build
+        run: cmake .. -DDESTDIR="${{ github.workspace }}/deps/out"
+      - name: Configuring dependencies (GTK3)
+        if: ${{ steps.cache.outputs.cache-hit != 'true' && matrix.gtk == 'GTK3' }}
+        working-directory: ./deps/build
+        run: cmake .. -DDESTDIR="${{ github.workspace }}/deps/out" -DDEP_WX_GTK3=ON
+      - name: Building dependencies
+        if: ${{ success() && steps.cache.outputs.cache-hit != 'true' }}
+        working-directory: ./deps/build
+        run: make -j2
+
+      - name: Configuring PrusaSlicer (GTK2)
+        if: ${{ success() && matrix.gtk == 'GTK2' }}
+        working-directory: ./build
+        run: cmake .. -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps/out/usr/local" -DSLIC3R_STATIC=1
+      - name: Configuring PrusaSlicer (GTK3)
+        if: ${{ success() && matrix.gtk == 'GTK3' }}
+        working-directory: ./build
+        run: cmake .. -DCMAKE_PREFIX_PATH="${{ github.workspace }}/deps/out/usr/local" -DSLIC3R_GTK=3 -DSLIC3R_STATIC=1
+      - name: Building PrusaSlicer
+        if: ${{ success() }}
+        working-directory: ./build
+        run: make -j2
+
+      - name: Copying files for packaging
+        if: ${{ success() }}
+        working-directory: ./build
+        run: |
+          cp -Rf ../resources pack/resources
+          cp -f src/prusa-slicer pack/bin/$PROJECT_NAME
+          find pack/resources/localization -name "*.po" -type f -delete
+      - name: Creating binary
+        if: ${{ success() }}
+        working-directory: ./build
+        run: |
+          echo -e '#!/bin/bash\nDIR=$(readlink -f "$0" | xargs dirname)\nexport LD_LIBRARY_PATH="$DIR/bin"\nexec "$DIR/bin/$PROJECT_NAME" "$@"' > pack/$PROJECT_NAME
+          chmod ug+x pack/bin/$PROJECT_NAME
+      - name: Packaging
+        if: ${{ success() }}
+        working-directory: ./build/pack
+        run: tar -cjvf ../PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.tar.bz2 .
+      - name: Uploading artifact
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.tar.bz2
+          path: ./build/PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.tar.bz2
+          if-no-files-found: error
+
+      - name: Downloading AppImage tool
+        if: ${{ success() }}
+        working-directory: ./build/appimage
+        run: |
+          wget https://github.com/AppImage/AppImageKit/releases/latest/download/appimagetool-x86_64.AppImage -O ./appimagetool.AppImage
+          chmod +x ./appimagetool.AppImage
+      - name: Preparing AppImage
+        if: ${{ success() }}
+        working-directory: ./build/pack
+        run: |
+          sed -i -e 's#/usr#././#g' bin/$PROJECT_NAME
+          mv $PROJECT_NAME AppRun
+          chmod +x AppRun
+      - name: Preparing resources
+        if: ${{ success() }}
+        working-directory: ./build/pack
+        run: |
+          cp resources/icons/PrusaSlicer_192px.png $PROJECT_NAME.png
+          mkdir -p usr/share/icons/hicolor/192x192/apps
+          cp resources/icons/PrusaSlicer_192px.png usr/share/icons/hicolor/192x192/apps/$PROJECT_NAME.png
+          cat <<EOF > $PROJECT_NAME.desktop
+          [Desktop Entry]
+          Name=$PROJECT_NAME
+          Exec=AppRun %F
+          Icon=$PROJECT_NAME
+          Type=Application
+          Categories=Utility;
+          MimeType=model/stl;application/vnd.ms-3mfdocument;application/prs.wavefront-obj;application/x-amf;
+          EOF
+      - name: Building AppImage
+        if: ${{ success() }}
+        working-directory: ./build/pack
+        run: |
+          ../appimage/appimagetool.AppImage .
+          mv PrusaSlicer-SE-x86_64.AppImage ../PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
+          chmod +x ../PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
+      - name: Uploading AppImage Artifact
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
+          path: ./build/PrusaSlicer-${{ github.ref_name }}+linux-${{ matrix.arch }}-${{ matrix.gtk }}-${{ needs.global.outputs.date }}.AppImage
+          if-no-files-found: error
+
+  ########################
+  # Artifact combination #
+  ########################
+  artifact_combination:
+    name: Combining artifacts
+    runs-on: ubuntu-22.04
+    needs: [global, linux, windows, macos-dmg]
+
+    steps:
+      - name: Creating directories
+        run: |
+          mkdir ./artifacts
+          mkdir ./output
+      - name: Downloading artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: ./artifacts
+      - name: Moving artifacts
+        run: for i in $(find . -type f); do mv $i ./output/; done
+      - name: Re-Upload artifacts
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: PrusaSlicer-${{ github.ref_name }}+Combined-${{ needs.global.outputs.date }}
+          path: ./output/
+          if-no-files-found: error

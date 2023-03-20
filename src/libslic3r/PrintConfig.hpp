@@ -72,6 +72,13 @@ enum class IroningType {
     Count,
 };
 
+enum class OnePerimeterTopType {
+    None,
+    TopSurfaces,
+    TopmostOnly,
+    Count,
+};
+
 enum class SlicingMode
 {
     // Regular, applying ClipperLib::pftNonZero rule when creating ExPolygons.
@@ -150,6 +157,7 @@ CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(AuthorizationType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FuzzySkinType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(InfillPattern)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(IroningType)
+CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(OnePerimeterTopType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(SlicingMode)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(SupportMaterialPattern)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(SupportMaterialStyle)
@@ -597,32 +605,35 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInt,                  infill_every_layers))
     ((ConfigOptionFloatOrPercent,       infill_overlap))
     ((ConfigOptionFloat,                infill_speed))
+    ((ConfigOptionEnum<OnePerimeterTopType>,    only_one_perimeter_top))
+    ((ConfigOptionBool,                         only_one_perimeter_bottom))
+
     // Ironing options
-    ((ConfigOptionBool,                 ironing))
-    ((ConfigOptionEnum<IroningType>,    ironing_type))
-    ((ConfigOptionPercent,              ironing_flowrate))
-    ((ConfigOptionFloat,                ironing_spacing))
-    ((ConfigOptionFloat,                ironing_speed))
+    ((ConfigOptionBool,                         ironing))
+    ((ConfigOptionEnum<IroningType>,            ironing_type))
+    ((ConfigOptionPercent,                      ironing_flowrate))
+    ((ConfigOptionFloat,                        ironing_spacing))
+    ((ConfigOptionFloat,                        ironing_speed))
     // Detect bridging perimeters
-    ((ConfigOptionBool,                 overhangs))
-    ((ConfigOptionInt,                  perimeter_extruder))
-    ((ConfigOptionFloatOrPercent,       perimeter_extrusion_width))
-    ((ConfigOptionFloat,                perimeter_speed))
+    ((ConfigOptionBool,                         overhangs))
+    ((ConfigOptionInt,                          perimeter_extruder))
+    ((ConfigOptionFloatOrPercent,               perimeter_extrusion_width))
+    ((ConfigOptionFloat,                        perimeter_speed))
     // Total number of perimeters.
-    ((ConfigOptionInt,                  perimeters))
-    ((ConfigOptionFloatOrPercent,       small_perimeter_speed))
-    ((ConfigOptionFloat,                solid_infill_below_area))
-    ((ConfigOptionInt,                  solid_infill_extruder))
-    ((ConfigOptionFloatOrPercent,       solid_infill_extrusion_width))
-    ((ConfigOptionInt,                  solid_infill_every_layers))
-    ((ConfigOptionFloatOrPercent,       solid_infill_speed))
+    ((ConfigOptionInt,                          perimeters))
+    ((ConfigOptionFloatOrPercent,               small_perimeter_speed))
+    ((ConfigOptionFloat,                        solid_infill_below_area))
+    ((ConfigOptionInt,                          solid_infill_extruder))
+    ((ConfigOptionFloatOrPercent,               solid_infill_extrusion_width))
+    ((ConfigOptionInt,                          solid_infill_every_layers))
+    ((ConfigOptionFloatOrPercent,               solid_infill_speed))
     // Detect thin walls.
-    ((ConfigOptionBool,                 thin_walls))
-    ((ConfigOptionFloatOrPercent,       top_infill_extrusion_width))
-    ((ConfigOptionInt,                  top_solid_layers))
-    ((ConfigOptionFloat,                top_solid_min_thickness))
-    ((ConfigOptionFloatOrPercent,       top_solid_infill_speed))
-    ((ConfigOptionBool,                 wipe_into_infill))
+    ((ConfigOptionBool,                         thin_walls))
+    ((ConfigOptionFloatOrPercent,               top_infill_extrusion_width))
+    ((ConfigOptionInt,                          top_solid_layers))
+    ((ConfigOptionFloat,                        top_solid_min_thickness))
+    ((ConfigOptionFloatOrPercent,               top_solid_infill_speed))
+    ((ConfigOptionBool,                         wipe_into_infill))
 )
 
 PRINT_CONFIG_CLASS_DEFINE(

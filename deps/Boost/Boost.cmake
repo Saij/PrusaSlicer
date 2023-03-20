@@ -77,13 +77,19 @@ if (UNIX)
     set(_boost_flags "cflags=-fPIC;cxxflags=-fPIC")
 endif ()
 
-if(APPLE)
+if (APPLE)
+    if (IS_CROSS_COMPILE)
+        message(STATUS "Compiling Boost as Universal")
+        set(_arch_flags "-arch arm64 -arch x86_64")
+        set(_boost_linkflags "linkflags=${_arch_flags}")
+    endif ()
+
     set(_boost_flags 
-        "cflags=-fPIC -mmacosx-version-min=${DEP_OSX_TARGET};"
-        "cxxflags=-fPIC -mmacosx-version-min=${DEP_OSX_TARGET};"
-        "mflags=-fPIC -mmacosx-version-min=${DEP_OSX_TARGET};"
-        "mmflags=-fPIC -mmacosx-version-min=${DEP_OSX_TARGET}") 
-endif()
+        "cflags=-fPIC ${_arch_flags} -mmacosx-version-min=${DEP_OSX_TARGET};"
+        "cxxflags=-fPIC ${_arch_flags} -mmacosx-version-min=${DEP_OSX_TARGET};"
+        "mflags=-fPIC ${_arch_flags} -mmacosx-version-min=${DEP_OSX_TARGET};"
+        "mmflags=-fPIC ${_arch_flags} -mmacosx-version-min=${DEP_OSX_TARGET}") 
+endif ()
 
 set(_boost_variants "")
 if(CMAKE_BUILD_TYPE)
@@ -127,7 +133,7 @@ set(_build_cmd ${_build_cmd}
                ${_boost_variants}
                stage)
 
-set(_install_cmd ${_build_cmd} --prefix=${_prefix} install)
+set(_install_cmd ${_build_cmd} --prefix=${_prefix} ${_boost_linkflags} install)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     # When Clang is used with enabled UndefinedBehaviorSanitizer, it produces "undefined reference to '__muloti4'" when __int128 is used.
@@ -159,6 +165,7 @@ if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
         DEPENDS dep_Boost
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
+        ${_cmake_args_osx_arch}
         INSTALL_COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_CURRENT_BINARY_DIR}/dep_boost_polygon-prefix/src/dep_boost_polygon/include/boost/polygon"
             "${DESTDIR}/usr/local/include/boost/polygon"

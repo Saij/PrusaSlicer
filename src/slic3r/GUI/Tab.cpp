@@ -1439,6 +1439,8 @@ void TabPrint::build()
         optgroup->append_single_option_line("staggered_inner_seams", category_path + "staggered-inner-seams");
         optgroup->append_single_option_line("external_perimeters_first", category_path + "external-perimeters-first");
         optgroup->append_single_option_line("gap_fill_enabled", category_path + "fill-gaps");
+        optgroup->append_single_option_line("only_one_perimeter_top", category_path + "only_one_perimeter_top");
+        optgroup->append_single_option_line("only_one_perimeter_bottom", category_path + "only_one_perimeter_bottom");
         optgroup->append_single_option_line("perimeter_generator");
 
         optgroup = page->new_optgroup(L("Fuzzy skin (experimental)"));
