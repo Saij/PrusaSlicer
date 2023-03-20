@@ -184,6 +184,12 @@ void LayerRegion::make_perimeters(
             loop_number = 0;
         }
 
+        // If we are on the bottommost layer and only_one_perimeter_bottom is active
+        // we set the number of loops to 0 to only generate 1 perimeter (if before we had more than 1)
+        if (loop_number > 0 && params.config.only_one_perimeter_bottom && lower_slices == nullptr) {
+            loop_number = 0;
+        }
+
         // If we have more than one perimeter
         // and the parameter only_one_perimeter_top active for all surfaces
         // and are not on the topmost layer

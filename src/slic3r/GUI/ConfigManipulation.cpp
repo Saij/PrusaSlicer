@@ -219,7 +219,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig* config)
     for (auto el : { "extra_perimeters","extra_perimeters_on_overhangs", "thin_walls", "overhangs",
                     "seam_position","staggered_inner_seams", "external_perimeters_first", "external_perimeter_extrusion_width",
                     "perimeter_speed", "small_perimeter_speed", "external_perimeter_speed", "enable_dynamic_overhang_speeds",
-                    "only_one_perimeter_top"})
+                    "only_one_perimeter_top","only_one_perimeter_top"})
         toggle_field(el, have_perimeters);
 
     for (size_t i = 0; i < 4; i++) {

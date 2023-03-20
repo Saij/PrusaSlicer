@@ -606,6 +606,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloatOrPercent,       infill_overlap))
     ((ConfigOptionFloat,                infill_speed))
     ((ConfigOptionEnum<OnePerimeterTopType>,    only_one_perimeter_top))
+    ((ConfigOptionBool,                         only_one_perimeter_bottom))
 
     // Ironing options
     ((ConfigOptionBool,                         ironing))
