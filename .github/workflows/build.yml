@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - build
+      - master
     tags:
       - '*'
 
